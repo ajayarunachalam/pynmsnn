@@ -158,6 +158,238 @@ Getting started
 
 -  **DEMO:**
 
+Example Binary Classification: Synthetic dataset
+------------------------------------------------
+
+. code:: python
+
+    __author__ = 'Ajay Arunachalam'
+    __version__ = '0.0.1'
+    __date__ = '19.7.2021'
+
+	import numpy as np
+	import pandas as pd
+	import seaborn as sns
+	import matplotlib.pyplot as plt
+	%matplotlib inline
+	import torch
+	import torch.nn as nn
+	import torch.optim as optim
+	from torch.utils.data import Dataset, DataLoader
+	from sklearn.preprocessing import StandardScaler, MinMaxScaler    
+	from sklearn.model_selection import train_test_split
+	from sklearn.metrics import confusion_matrix, classification_report
+	from sklearn.datasets import make_classification
+	from pyNM.cf_matrix import make_confusion_matrix
+	from pyNM.spiking_binary_classifier import *
+	from plot_metric.functions import MultiClassClassification, BinaryClassification
+
+	#fixing random state
+	random_state=1234
+
+	# Generate 2 class dataset
+	X, Y = make_classification(n_samples=10000, n_classes=2, weights=[1,1], random_state=1)
+	# split into train/test sets
+	#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=2)
+
+	# Load dataset (we just selected 4 classes of digits)
+	#X, Y = load_digits(n_class=4, return_X_y=True)
+
+	print(f'Predictors: {X}')
+
+	print(f'Outcome: {Y}')
+
+	print(f'Distribution of target:')
+	print(pd.value_counts(Y))
+
+	# Add noisy features to make the problem more harder
+	random_state = np.random.RandomState(123)
+	n_samples, n_features = X.shape
+	X = np.c_[X, random_state.randn(n_samples, 1000 * n_features)]
+
+	## Spliting data into train and test sets.
+	X, X_test, y, y_test = train_test_split(X, Y, test_size=0.4,
+	                                        random_state=123)
+
+	## Spliting train data into training and validation sets.
+	X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2,
+	                                                      random_state=1)
+
+	print('Data shape:')
+	print('X_train: %s, X_valid: %s, X_test: %s \n' %(X_train.shape, X_valid.shape,
+	                                                  X_test.shape))
+
+	# Scale data to have mean '0' and variance '1' 
+	# which is importance for convergence of the neural network
+	scaler = StandardScaler()
+	X_train = scaler.fit_transform(X_train)
+	X_valid = scaler.transform(X_valid)
+	X_test = scaler.transform(X_test)
+
+	X_train, y_train = np.array(X_train), np.array(y_train)
+
+	X_valid, y_valid = np.array(X_valid), np.array(y_valid)
+
+	X_test, y_test = np.array(X_test), np.array(y_test)
+
+	EPOCHS = 50
+	BATCH_SIZE = 64
+	LEARNING_RATE = 0.001
+
+	## train data
+	class trainData(Dataset):
+	    
+	    def __init__(self, X_data, y_data):
+	        self.X_data = X_data
+	        self.y_data = y_data
+	        
+	    def __getitem__(self, index):
+	        return self.X_data[index], self.y_data[index]
+	        
+	    def __len__ (self):
+	        return len(self.X_data)
+
+
+	train_data = trainData(torch.FloatTensor(X_train), 
+	                       torch.FloatTensor(y_train))
+
+	## validation data
+
+	class valData(Dataset):
+	    def __init__(self, X_data, y_data):
+	        self.X_data = X_data
+	        self.y_data = y_data
+	        
+	    def __getitem__(self, index):
+	        return self.X_data[index], self.y_data[index]
+	        
+	    def __len__ (self):
+	        return len(self.X_data)
+	    
+	val_data = valData(torch.FloatTensor(X_valid), 
+	                       torch.FloatTensor(y_valid))
+
+	## test data    
+	class testData(Dataset):
+	    
+	    def __init__(self, X_data):
+	        self.X_data = X_data
+	        
+	    def __getitem__(self, index):
+	        return self.X_data[index]
+	        
+	    def __len__ (self):
+	        return len(self.X_data)
+	    
+
+	test_data = testData(torch.FloatTensor(X_test))
+
+	train_loader = DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
+	val_loader = DataLoader(dataset=val_data, batch_size=BATCH_SIZE, shuffle=True)
+	test_loader = DataLoader(dataset=test_data, batch_size=1)
+
+	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	print(device)
+
+	model = SpikingNeuralNetwork(device, X_train.shape[1], n_time_steps=500, begin_eval=0)
+	model.to(device)
+	print(model)
+	criterion = nn.BCEWithLogitsLoss()
+	optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+
+	def binary_acc(y_pred, y_test):
+
+    	y_pred_tag = torch.round(torch.sigmoid(y_pred))
+
+    	correct_results_sum = (y_pred_tag == y_test).sum().float()
+    	acc = correct_results_sum/y_test.shape[0]
+    	acc = torch.round(acc * 100)
+    
+    	return acc
+
+	model.train()
+	for e in range(1,EPOCHS+1):
+	    epoch_loss = 0
+	    epoch_acc = 0
+	    for X_batch, y_batch in train_loader:
+	        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+	        optimizer.zero_grad()
+	        y_pred = model(X_batch)
+	        loss = criterion(y_pred, y_batch.unsqueeze(1))
+	        acc = binary_acc(y_pred, y_batch.unsqueeze(1))
+	        
+	        loss.backward()
+	        optimizer.step()
+	        
+	        epoch_loss += loss.item()
+	        epoch_acc += acc.item()
+
+	    print(f'Epoch {e+0:03}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')
+
+	y_pred_list = []
+	model.eval()
+	with torch.no_grad():
+	    for X_batch in test_loader:
+	        X_batch = X_batch.to(device)
+	        y_test_pred = model(X_batch)
+	        y_test_pred = torch.sigmoid(y_test_pred)
+	        y_pred_tag = torch.round(y_test_pred)
+	        y_pred_list.append(y_pred_tag.cpu().numpy())
+
+	y_pred_list = [a.squeeze().tolist() for a in y_pred_list]
+
+	#Get the confusion matrix
+	cf_matrix = confusion_matrix(y_test, y_pred_list)
+	print(cf_matrix)
+	make_confusion_matrix(cf_matrix, figsize=(8,6), cbar=False, title='CF Matrix')
+
+	print(classification_report(y_test, y_pred_list))
+
+	# report
+	# Visualisation of plots
+	bc = BinaryClassification(y_test, y_pred_list, labels=[0, 1])
+	# Figures
+	plt.figure(figsize=(15,10))
+	plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
+	bc.plot_roc_curve()
+	plt.subplot2grid((2,6), (0,2), colspan=2)
+	bc.plot_precision_recall_curve()
+	plt.subplot2grid((2,6), (0,4), colspan=2)
+	bc.plot_class_distribution()
+	plt.subplot2grid((2,6), (1,1), colspan=2)
+	bc.plot_confusion_matrix()
+	plt.subplot2grid((2,6), (1,3), colspan=2)
+	bc.plot_confusion_matrix(normalize=True)
+
+	# Save figure
+	plt.savefig('./example_binary_classification.png')
+
+	# Display Figure
+	plt.show()
+	plt.close()
+
+	# Full report of the classification
+	bc.print_report()
+
+	# Example custom param using dictionnary
+	param_pr_plot = {
+	    'c_pr_curve':'blue',
+	    'c_mean_prec':'cyan',
+	    'c_thresh_lines':'red',
+	    'c_f1_iso':'green',
+	    'beta': 2,
+	}
+
+	plt.figure(figsize=(6,6))
+	bc.plot_precision_recall_curve(**param_pr_plot)
+
+	# Save figure
+	plt.savefig('./example_binary_class_PRCurve_custom.png')
+
+	# Display Figure
+	plt.show()
+	plt.close()
+
 Example MultiClass Classification: IRIS dataset
 ------------------------------------------------
 
