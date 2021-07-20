@@ -1,0 +1,11 @@
+pandas
+numpy
+sklearn
+xgboost
+scipy
+matplotlib
+plot-metric
+regressioncomparemetricplot
+torch==1.4.0
+seaborn==0.9.0
+tqdm==4.59.0
