@@ -161,7 +161,7 @@ Getting started
 Example Binary Classification: Synthetic dataset
 ------------------------------------------------
 
-. code:: python
+.. code:: python
 
     __author__ = 'Ajay Arunachalam'
     __version__ = '0.0.1'
