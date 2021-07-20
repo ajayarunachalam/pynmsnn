@@ -120,7 +120,7 @@ Requirements
 -  Matplotlib
 -  Seaborn[0.9.0]
 -  Plot-metric
--  regressioncomparemetricplot
+-  regressormetricgraphplot
 -  tqdm
 
 

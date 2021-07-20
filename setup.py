@@ -5,7 +5,7 @@ with open("README.rst", "r") as fh:
 
 setuptools.setup(
     name='pynmsnn',
-    version='0.0.1',
+    version='0.0.2',
     scripts=['pynmsnn_package'],
     install_requires=[
         "pandas",
@@ -18,7 +18,7 @@ setuptools.setup(
         "scikit_learn",
         "matplotlib",
         "plot-metric",
-        "regressioncomparemetricplot",
+        "regressormetricgraphplot",
     ],
     author="Ajay Arunachalam",
     author_email="ajay.arunachalam08@gmail.com",
