@@ -167,7 +167,7 @@ Example MultiClass Classification: IRIS dataset
     __version__ = '0.0.1'
     __date__ = '19.7.2021'
 
-    from spiking_multiclass_classifier import *
+    from pyNM.spiking_multiclass_classifier import *
     import torch
     import torch.nn.functional as F
     import torch.nn as nn
@@ -190,7 +190,7 @@ Example MultiClass Classification: IRIS dataset
     from sklearn.datasets import load_iris
     from sklearn.metrics import roc_curve, auc
     from sklearn.metrics import confusion_matrix
-    from cf_matrix import make_confusion_matrix
+    from pyNM.cf_matrix import make_confusion_matrix
     from plot_metric.functions import MultiClassClassification
     import seaborn as sns
     from random import *
