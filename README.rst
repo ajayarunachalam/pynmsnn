@@ -3,7 +3,7 @@ pynmsnn: NeuroMorphic Predictive Model with Spiking Neural Networks (SNN) in Pyt
 
 **pynmsnn**
 
-GitHub: https://github.com/ajayarunachalam/pynmsnn
+PyPI: https://pypi.org/project/pynmsnn/
 
 About pynmsnn
 =============
