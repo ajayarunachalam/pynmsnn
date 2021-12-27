@@ -5,6 +5,8 @@ pynmsnn: NeuroMorphic Predictive Model with Spiking Neural Networks (SNN) in Pyt
 
 PyPI: https://pypi.org/project/pynmsnn/
 
+**Related Blog:** https://towardsdatascience.com/design-a-neuromorphic-predictive-network-architecture-with-pytorch-72d523e16930
+
 About pynmsnn
 =============
 
